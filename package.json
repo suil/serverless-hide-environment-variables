@@ -1,0 +1,38 @@
+{
+  "name": "serverless-hide-environment-variables",
+  "version": "1.0.0",
+  "description": "Serverless plugin that hides environment variables for AWS Lambda functions using KMS encryption before deployment",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suil/serverless-hide-environment-variables.git"
+  },
+  "keywords": [
+    "serverless",
+    "framework",
+    "plugin",
+    "serverless plugins",
+    "kms",
+    "encryption",
+    "encrypt",
+    "hide",
+    "environment variables",
+    "aws",
+    "lambda",
+    "aws lambda",
+    "amazon web services",
+    "deployment"
+  ],
+  "author": "Shaun Liu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/suil/serverless-hide-environment-variables/issues"
+  },
+  "homepage": "https://github.com/suil/serverless-hide-environment-variables#readme",
+  "dependencies": {
+    "aws": "0.0.3-2"
+  }
+}
