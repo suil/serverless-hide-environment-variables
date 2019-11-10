@@ -33,6 +33,6 @@
   },
   "homepage": "https://github.com/suil/serverless-hide-environment-variables#readme",
   "dependencies": {
-    "aws": "0.0.3-2"
+    "aws-sdk": "^2.568.0"
   }
 }
