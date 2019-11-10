@@ -4,7 +4,7 @@ Serverless plugin that hides environment variables for AWS Lambda functions usin
 ## Introduction
 Checking-in environment variables in serverless.yml into repositories is a very convenient and popular way to manage runtime configurations for serverless applications. With this approach, however, sensitive information like API keys and secret tokens will be exposed publicly. This pratice is probably against security policies in every organization.
 
-This plgin is to hide sensitive environment variables in both provider's environment section and functions's environment section using KMS encrypted string. Then, the serverless framework's deployment process will decrypt them using KMS keys in a specified region, so that Lambda function can consume them from `process.env.SECRET_API_KEY` in the runtime.
+This plugin is to hide sensitive environment variables in both provider's environment section and functions's environment section using KMS encrypted string. Then, the serverless framework's deployment process will decrypt them using KMS keys in a specified region, so that Lambda function can consume them from `process.env.SECRET_API_KEY` in the runtime.
 
 ## Usage
 
@@ -38,8 +38,15 @@ plugins:
 
 If an environment variable is a encrypted string, it has to be put as an object that has `encrypted` key. `kmsKeyRegion` key in the object is the region where the KMS key you use for encrypting the variable value. `kmsKeyRegion` key is optional. If it's missing, the region from command line will be used. If the region from command line is even missing, `'us-east-1'` will be used.
 
-### Local invocation of a lambda function.
+### Local invocation of a lambda function
 The decryption does actually work in the local invocation for a lambda function. Once the environment variables are configured correctly, `process.env.SECRET_API_KEY` will have decrypted value as if it's in deployed Lambda environtment.
 
-    
+### Working with serverless-offline plugin
+This plugin can work with serverless-offline plugin to provide decryption functionality of environment variables in the offline scenario. But this will work only when `serverless-hide-environment-variables` is configured above `serverless-offline` in the `plugins` section in `serverless.yml`. This is to ensure that `serverless-hide-environment-variables` can register the event of `serverless-offline` correctly.
 
+```
+plugins:
+  - serverless-hide-environment-variables
+  - serverless-offline
+  ...
+```

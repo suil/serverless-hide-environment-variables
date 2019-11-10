@@ -10,15 +10,16 @@ module.exports = class HideEnvironmentVariablesPlugin {
             'package:createDeploymentArtifacts': this.replaceEnvironmentVariables.bind(this),
             'before:deploy:function:packageFunction': this.replaceEnvironmentVariables.bind(this),
             'before:invoke:local:invoke': this.replaceProcessEnvVariablesForFunction.bind(this),
-            'before:invoke:local:loadEnvVars': this.replaceEnvironmentVariables.bind(this)
+            'before:invoke:local:loadEnvVars': this.replaceEnvironmentVariables.bind(this),
+            'before:offline:start': this.replaceEnvironmentVariables.bind(this)
         };
     }
 
     async awsKmsDecrypt(value, region) {
         try {
             const kms = new AWS.KMS({ apiVersion: '2014-11-01', region });
-            const result = await kms.decrypt({ CiphertextBlob: new Buffer(value, 'base64') }).promise();
-            return result.Plaintext.toString('ascii');
+            const { Plaintext: plaintext } = await kms.decrypt({ CiphertextBlob: new Buffer(value, 'base64') }).promise();
+            return plaintext.toString('ascii');
         } catch (error) {
             this.serverless.cli.consoleLog('AWS KMS service cannot decrypt');
             throw error;
