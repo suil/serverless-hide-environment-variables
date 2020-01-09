@@ -1,6 +1,6 @@
 {
   "name": "serverless-hide-environment-variables",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Serverless plugin that hides environment variables for AWS Lambda functions using KMS encryption before deployment",
   "main": "index.js",
   "scripts": {
