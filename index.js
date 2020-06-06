@@ -17,38 +17,115 @@ module.exports = class HideEnvironmentVariablesPlugin {
 
     async awsKmsDecrypt(value, region) {
         try {
-            const kms = new AWS.KMS({ apiVersion: '2014-11-01', region });
+            const kms = new AWS.KMS({
+                apiVersion: '2014-11-01',
+                region: region || this.region || 'us-east-1'
+            });
             const { Plaintext: plaintext } = await kms.decrypt({ CiphertextBlob: new Buffer(value, 'base64') }).promise();
+            this.serverless.cli.consoleLog(`Decrypted cipher ${value} to ${plaintext} using a key in region ${region}`);
             return plaintext.toString('ascii');
         } catch (error) {
-            this.serverless.cli.consoleLog('AWS KMS service cannot decrypt');
+            this.serverless.cli.consoleLog(`AWS KMS service cannot decrypt value: ${value}`);
             throw error;
         }
     }
 
-    async decryptVariable(environmentVariable) {
-        if (typeof environmentVariable !== 'object' || !environmentVariable.encrypted) {
-            return environmentVariable;
+    async decryptObjectCipher(objectCipher) {
+        if (typeof objectCipher !== 'object' || !objectCipher.encrypted) {
+            this.serverless.cli.consoleLog('Object cipher format is not correct:', objectCipher);
+            throw new Error('Object cipher format is not correct:', objectCipher);
         }
         const { encrypted, kmsKeyRegion } = environmentVariable;
         const decrypted = await this.awsKmsDecrypt(encrypted, kmsKeyRegion || this.region || 'us-east-1');
         return decrypted;
     }
-    
+
     async replaceVariables(environmentVariables) {
-        if (!environmentVariables) {
+        if (!environmentVariables || typeof environmentVariables !== 'object') {
             return;
         }
         return Promise.all(
             Object.keys(environmentVariables)
-                .filter(variableName => typeof environmentVariables[variableName] === 'object' && environmentVariables[variableName].encrypted)
-                .map(async variableName => {
-                    environmentVariables[variableName] = await this.decryptVariable(environmentVariables[variableName]);
-                    this.serverless.cli.consoleLog(`Decrypted variable ${variableName} to ${environmentVariables[variableName]}`);
-                })
+                .reduce((memo, variableName) => {
+                    const variableValue = environmentVariables[variableName];
+                    const promisedDecrypt = async (cipher, region) => {
+                        const decryptedValue = await this.awsKmsDecrypt(cipher, region);
+                        environmentVariables[variableName] = decryptedValue;
+                    };
+
+                    // found object cipher format
+                    const parsedObjectCipher = this.parseObjectCipherFormat(variableValue);
+                    if (parsedObjectCipher !== false) {
+                        const { region, cipher } = parsedObjectCipher;
+                        memo.push(promisedDecrypt(cipher, region));
+                        return memo;
+                    }
+
+                    // found data cipher format
+                    const parsedDataCipher = this.parseDataCipherFormat(variableValue);
+                    if (parsedDataCipher !== false) {
+                        const { region, cipher } = parsedDataCipher;
+                        memo.push(promisedDecrypt(cipher, region));
+                        return memo;
+                    }
+
+                    return memo;
+                }, [])
         );
     }
-    
+
+    parseObjectCipherFormat(objectCipherFormat) {
+        if (typeof objectCipherFormat !== 'object' || !objectCipherFormat.hasOwnProperty('encrypted')) {
+            return false;
+        }
+        const { encrypted, kmsKeyRegion } = objectCipherFormat;
+        if (typeof encrypted !== 'string' || encrypted.trim() === '') {
+            throw new Error(`Object cipher format is not correct ${JSON.stringify(objectCipherFormat, null, 2)}`)
+        }
+        return {
+            cipher: encrypted,
+            region: kmsKeyRegion
+        };
+    }
+
+    parseDataCipherFormat(cipherFormat) {
+        if (typeof cipherFormat !== 'string') {
+            return false;
+        }
+
+        const match = cipherFormat.match(/^data:aws\/kms;([\w-]*,?.*)/im);
+        if (!match) {
+            return false;
+        }
+
+        const [, regionAndCipherData = ''] = match;
+        const splittedRegionAndCipherData = regionAndCipherData
+            .split(',')
+            .filter(Boolean);
+
+        if (
+            splittedRegionAndCipherData &&
+            splittedRegionAndCipherData.length === 1
+        ) {
+            return {
+                region: 'us-east-1',
+                cipher: splittedRegionAndCipherData[0]
+            };
+        }
+
+        if (
+            splittedRegionAndCipherData &&
+            splittedRegionAndCipherData.length === 2
+        ) {
+            return {
+                region: splittedRegionAndCipherData[0],
+                cipher: splittedRegionAndCipherData[1]
+            };
+        }
+
+        throw 'WRONG_CIPHER_VALUE';
+    }
+
     async replaceEnvironmentVariables() {
         return Promise.all([
             this.replaceVariables(this.serverless.service.provider.environment),

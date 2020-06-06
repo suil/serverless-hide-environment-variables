@@ -18,17 +18,26 @@ Put your encrypted string to the provider's environment section or function's en
 provider:
   ...
   environment:
-    GENERAL_ENCRYPTED_API_KEY:
+    GENERAL_ENCRYPTED_API_KEY_WITH_OBJECT_CIPHER_FORMAT:
       encrypted: AQICAHinIKhx8yV+y97+qS5naGEB...
       kmsKeyRegion: us-east-1
+
+    GENERAL_ENCRYPTED_API_KEY_WITH_DATA_CIPHER_FORMAT:
+      encrypted: data:aws/kms;us-east-1,AQICAHinIKhx8yV+y97+qS5naGEB...
+
     GENERAL_NORMAL_API_KEY: unencrypted-key-value
 
 functions:
   yourLambdaFunction:
     environment:
-      FUNCTION_SPECIFIC_ENCRYPTED_API_KEY:
+      FUNCTION_SPECIFIC_ENCRYPTED_API_KEY_WITH_OBJECT_CIPHER_FORMAT:
         encrypted: AQICAHinIKhx8yV+y97+qS5naGEB...
         kmsKeyRegion: us-west-2
+
+      FUNCTION_SPECIFIC_ENCRYPTED_API_KEY_WITH_DATA_CIPHER_FORMAT:
+        encrypted: data:aws/kms;us-east-1,AQICAHinIKhx8yV+y97+qS5naGEB...
+        kmsKeyRegion: us-west-2
+
       FUNCTION_SPECIFIC_NORMAL_API_KEY: unencrypted-key-value
 
 plugins:
@@ -36,7 +45,23 @@ plugins:
   ...
 ```
 
-If an environment variable is a encrypted string, it has to be put as an object that has `encrypted` key. `kmsKeyRegion` key in the object is the region where the KMS key you use for encrypting the variable value. `kmsKeyRegion` key is optional. If it's missing, the region from command line will be used. If the region from command line is even missing, `'us-east-1'` will be used.
+If an environment variable is a encrypted string, it can be put as an object cipher format or a data cipher format. These two formats are described as follows:
+
+#### Object Cipher Format ####
+This format has to be an object that contains a required key `encrypted` and an optional key `kmsKeyRegion`. `encrypted` should be assigned with encrypted cipher texts. And `kmsKeyRegion` is the region where the value has been encrypted with your KMS key. `kmsKeyRegion` key is optional. If it's missing, the region from command line will be used. If the region from command line is even missing, `'us-east-1'` will be used.
+
+#### Data Cipher Format ####
+This format is a pure JavaScript string with certain pattern. It has a prefix string that starts with `data:aws/kms;` followed by an optional AWS region string. And then, a comma separates the prefix and encrypted value. If the the a region is not provided, the comma seperator can be skipped. The following are all valid data cipher format:
+```
+data:aws/kms;us-east-1,AQICAHinIKhx8yV+y97+qS5naGEB...
+```
+```
+data:aws/kms;,AQICAHinIKhx8yV+y97+qS5naGEB...
+```
+```
+data:aws/kms;AQICAHinIKhx8yV+y97+qS5naGEB...
+```
+In the case where the region is missing, it follows the same rule as Object Cipher Format when filling default region value.
 
 ### Local invocation of a lambda function
 The decryption does actually work in the local invocation for a lambda function. Once the environment variables are configured correctly, `process.env.SECRET_API_KEY` will have decrypted value as if it's in deployed Lambda environtment.
