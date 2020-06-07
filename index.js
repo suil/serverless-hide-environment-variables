@@ -11,6 +11,7 @@ module.exports = class HideEnvironmentVariablesPlugin {
             'before:deploy:function:packageFunction': this.replaceEnvironmentVariables.bind(this),
             'before:invoke:local:invoke': this.replaceProcessEnvVariablesForFunction.bind(this),
             'before:invoke:local:loadEnvVars': this.replaceEnvironmentVariables.bind(this),
+            'before:offline:start': this.replaceEnvironmentVariables.bind(this),
             'before:offline:start:init': this.replaceEnvironmentVariables.bind(this)
         };
     }
